@@ -155,12 +155,14 @@ void setup_ros()
 
 void reconnect_ros(EyeManager &eye)
 {
+  if (nh.connected()) return;  // already connected, nothing to do
+
   while (not nh.connected())
   {
     nh.spinOnce();
-    delay(1000);
-    // when ROS node is re-connected, get rosparam again
-    setup_asset(eye);
-    eye.init();
+    delay(500);
   }
+  // ROS just connected: read rosparam and initialize sprites once
+  setup_asset(eye);
+  eye.init();
 }
