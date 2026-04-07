@@ -1,0 +1,10 @@
+<launch>
+  <!-- joy_node: deadzone 줄여서 작은 움직임도 반응 -->
+  <node pkg="joy" type="joy_node" name="joy_node">
+    <param name="dev"             value="/dev/input/js0" />
+    <param name="deadzone"        value="0.05" />
+    <param name="autorepeat_rate" value="30" />
+  </node>
+
+  <node pkg="eye_display" type="joy_eye_status.py" name="joy_eye_status" />
+</launch>

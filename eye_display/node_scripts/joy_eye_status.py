@@ -6,14 +6,13 @@ from std_msgs.msg import Float32
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Point
 
-pub_status_right = rospy.Publisher('/right/eye_display/eye_status',String,queue_size=1)
-pub_status_left = rospy.Publisher('/left/eye_display/eye_status',String,queue_size=1)
-pub_look_right = rospy.Publisher('/right/eye_display/look_at',Point,queue_size=1)
-pub_look_left = rospy.Publisher('/left/eye_display/look_at',Point,queue_size=1)
-
-eye_status = 0
+eye_status = "normal"
 look_at_x = 0.0
 look_at_y = 0.0
+
+prev_eye_status = "normal"
+prev_look_at_x = 0.0
+prev_look_at_y = 0.0
 
 def joy_cb(msg):
     print("in callback")
@@ -21,6 +20,11 @@ def joy_cb(msg):
     global eye_status
     global look_at_x
     global look_at_y
+
+    global prev_eye_status
+    global prev_look_at_x
+    global prev_look_at_y
+    
     look_at_pub_msg = Point()
     
     if len(msg.buttons)> 0:
@@ -42,19 +46,31 @@ def joy_cb(msg):
             eye_status = "normal"
     else:
         eye_status = "normal"
-    pub_status_right.publish(eye_status)
-    pub_status_left.publish(eye_status)
+    if eye_status != prev_eye_status:
+        pub_status_right.publish(eye_status)
+        pub_status_left.publish(eye_status)
+        prev_eye_status = eye_status
 
     if len(msg.axes) > 0:
-        look_at_x = float(msg.axes[0])*20.0+2.0
-        look_at_y = - float(msg.axes[1])*20.0+2.0
-        print(f"look_at_x = {look_at_x}, look_at_y = {look_at_y}")
-    look_at_pub_msg.x = look_at_x
-    look_at_pub_msg.y = look_at_y
-    pub_look_left.publish(look_at_pub_msg)
-    pub_look_right.publish(look_at_pub_msg)
+        look_at_x =   float(msg.axes[0]) * 30.0
+        look_at_y = - float(msg.axes[1]) * 30.0
+
+    look_at_x = round(look_at_x, 2)
+    look_at_y = round(look_at_y, 2)
+
+    if look_at_x != prev_look_at_x or look_at_y != prev_look_at_y:
+        look_at_pub_msg.x = look_at_x
+        look_at_pub_msg.y = look_at_y
+        pub_look_left.publish(look_at_pub_msg)
+        pub_look_right.publish(look_at_pub_msg)
+        prev_look_at_x = look_at_x
+        prev_look_at_y = look_at_y
 
 if __name__ == '__main__':
     rospy.init_node('eye_st_from_joy')
-    rospy.Subscriber('/joy',Joy, joy_cb)
+    pub_status_right = rospy.Publisher('/right/eye_display/eye_status',String,queue_size=1)
+    pub_status_left = rospy.Publisher('/left/eye_display/eye_status',String,queue_size=1)
+    pub_look_right = rospy.Publisher('/right/eye_display/look_at',Point,queue_size=1)
+    pub_look_left = rospy.Publisher('/left/eye_display/look_at',Point,queue_size=1)
+    rospy.Subscriber('/joy',Joy, joy_cb, queue_size=1)
     rospy.spin()
