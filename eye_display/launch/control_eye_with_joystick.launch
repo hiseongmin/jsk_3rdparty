@@ -1,4 +1,17 @@
 <launch>
+  <arg name="left_edge" default ="-10.0"/>
+  <arg name="right_edge" default ="40.0"/>
+  <arg name="upper_edge" default ="-15.0"/>
+  <arg name="bottom_edge" default ="40.0"/>
+  <arg name="x_diff" default="30.0"/>
+  <arg name="y_diff" default="5.0"/>
   <include file="$(find teleop_twist_joy)/launch/teleop.launch" />
-  <node pkg="eye_display" type="joy_eye_status.py" name="joy_eye_status"/>
+  <node pkg="eye_display" type="joy_eye_status.py" name="joy_eye_status">
+    <param name="left_edge" value="$(arg left_edge)" />
+    <param name="right_edge" value="$(arg right_edge)" />
+    <param name="upper_edge" value="$(arg upper_edge)" />
+    <param name="bottom_edge" value="$(arg bottom_edge)" />
+    <param name="x_diff" value="$(arg x_diff)" />
+    <param name="y_diff" value="$(arg y_diff)" />
+  </node>
 </launch>
