@@ -1,0 +1,2 @@
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1001", ATTRS{serial}=="F4:12:FA:9D:8E:94", SYMLINK+="ttyACM-righteye", GROUP="dialout"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1001", ATTRS{serial}=="70:04:1D:D3:DD:7C", SYMLINK+="ttyACM-lefteye", GROUP="dialout"

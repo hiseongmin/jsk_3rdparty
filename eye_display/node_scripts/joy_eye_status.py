@@ -51,9 +51,12 @@ def joy_cb(msg):
         pub_status_left.publish(eye_status)
         prev_eye_status = eye_status
 
+    SNAP_THRESHOLD = 0.1  # 이 값 미만이면 0으로 처리 (스틱 복귀 오차 제거)
     if len(msg.axes) > 0:
-        look_at_x =   float(msg.axes[0]) * 30.0
-        look_at_y = - float(msg.axes[1]) * 30.0
+        ax = float(msg.axes[0])
+        ay = float(msg.axes[1])
+        look_at_x =   (ax if abs(ax) >= SNAP_THRESHOLD else 0.0) * 30.0
+        look_at_y = - (ay if abs(ay) >= SNAP_THRESHOLD else 0.0) * 30.0
 
     look_at_x = round(look_at_x, 2)
     look_at_y = round(look_at_y, 2)
