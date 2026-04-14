@@ -348,7 +348,7 @@ void EyeManager::update_look(float dx = 0.0f, float dy = 0.0f, float dtheta = 0.
     sprite_upperlid.pushRotateZoom(&sprite_eye,
                                    current_eye_asset.upperlid_default_pos_x + dx_upperlid,
                                    current_eye_asset.upperlid_default_pos_y + dy_upperlid,
-                                   current_eye_asset.upperlid_default_theta + dtheta_upperlid,
+                                   (current_eye_asset.upperlid_default_theta + dtheta_upperlid) * (current_eye_asset.invert_rl ? -1 : 1),
                                    zoom_upperlid*dzoom_upperlid, zoom_upperlid, TFT_WHITE);
 
     if (current_eye_asset.path_extra.size() > 0) {
