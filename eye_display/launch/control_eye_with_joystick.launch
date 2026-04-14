@@ -1,7 +1,7 @@
 <launch>
-  <arg name="left_edge" default ="-10.0"/>
+  <arg name="left_edge" default ="10.0"/>
   <arg name="right_edge" default ="40.0"/>
-  <arg name="upper_edge" default ="-15.0"/>
+  <arg name="upper_edge" default ="15.0"/>
   <arg name="bottom_edge" default ="40.0"/>
   <arg name="x_diff" default="30.0"/>
   <arg name="y_diff" default="5.0"/>

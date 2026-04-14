@@ -6,129 +6,76 @@ from std_msgs.msg import Float32
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Point
 
-eye_status = "normal"
-look_at_x = 0.0
-look_at_y = 0.0
-
 prev_eye_status = "normal"
-prev_look_at_x = 0.0
-prev_look_at_y = 0.0
-prev_buttons = []
-
-last_status_pub_time = rospy.Time(0)
-last_look_pub_time = rospy.Time(0)
-
-def publish_status(status, now):
-    global last_status_pub_time
-    if look_at_x == 0.0 and look_at_y == 0.0:
-        if status != prev_eye_status or (now - last_status_pub_time) >= duration:
-            # for dual eye mode
-            if pub_status_left.get_num_connections() > 0:
-                pub_status_left.publish(status)
-                pub_status_right.publish(status)
-            # for single eye mode
-            else:
-                pub_status.publish(status)
-            last_status_pub_time = now
-
-def publish_look(l_x, l_y, r_x, r_y, now):
-    global last_look_pub_time
-
-    if (now - last_look_pub_time) < duration:
-        return
-
-    l_msg = Point()
-    r_msg = Point()
-    l_msg.x = l_x
-    l_msg.y = l_y
-    r_msg.x = r_x
-    r_msg.y = r_y
-
-    # for dual eye mode
-    if pub_look_left.get_num_connections() > 0:
-        pub_look_left.publish(l_msg)
-        pub_look_right.publish(r_msg)
-    
-    # for single eye mode
-    else:
-        pub_look.publish(r_msg)
-
-    last_look_pub_time = now
-    rospy.loginfo("x_diff:{}".format(eye_x_diff))
+prev_look_at = Point()
+joy_msg = Joy()
 
 def joy_cb(msg):
+    global joy_msg
+    joy_msg = msg
 
-    rospy.loginfo("in the callback")
-    global eye_status
-    global look_at_x
-    global look_at_y
-
+def timer_cb(event):
     global prev_eye_status
-    global prev_look_at_x
-    global prev_look_at_y
-    global prev_buttons
-    now = rospy.Time.now()
-    
-    if len(msg.axes) > 1:
-        if eye_status == "normal":
-            if float(msg.axes[0]) >= 0.0:
-                look_at_x = float(msg.axes[0]) * left_edge
-                look_at_l_x = float(msg.axes[0]) * (left_edge - eye_x_diff)
-            elif float(msg.axes[0]) < 0.0:
-                look_at_x = - float(msg.axes[0]) * right_edge
-                look_at_l_x = - float(msg.axes[0]) * (right_edge - eye_x_diff)
-
-            if float(msg.axes[1]) >= 0.0:
-                look_at_y = float(msg.axes[1]) * upper_edge
-                look_at_l_y = float(msg.axes[1]) * (upper_edge - eye_y_diff)
-            elif float(msg.axes[1]) < 0.0:
-                look_at_y = - float(msg.axes[1]) * bottom_edge
-                look_at_l_y = - float(msg.axes[1]) * (bottom_edge + eye_y_diff)
-
-            publish_look(look_at_l_x, look_at_l_y, look_at_x, look_at_y, now)
-
-    if not prev_buttons:
-        prev_buttons = [0] * len(msg.buttons)
-
-    n = min(len(prev_buttons), len(msg.buttons))
-    if len(msg.buttons)> 0:
-        if msg.buttons[0] == 1:
-            eye_status = "normal"
-        elif n >= 0 and msg.buttons[1] == 1:
-            eye_status = "blink"
-        elif n >= 1 and msg.buttons[2] == 1:
-            eye_status = "surprised"
-        elif n >= 2 and msg.buttons[3] == 1:
-            eye_status = "sleepy"
-        elif n >= 3 and msg.buttons[4] == 1:
-            eye_status = "angry"
-        elif n >= 4 and msg.buttons[5] == 1:
-            eye_status = "sad"
-        elif n >= 5 and msg.buttons[6] == 1:
-            eye_status = "happy"
-        else:
-            eye_status = "normal"
+    global prev_look_at
+    global joy_msg
+    msg = joy_msg
+    # get name of eye state mode
+    if rospy.has_param("eye_display/eye_asset/names"):
+        eye_asset_names = rospy.get_param("eye_display/eye_asset/names")
     else:
-        eye_status = "normal"
+        rospy.logwarn("no eye_asset_names found from rosparm '/eye_display/eye_asset/names'")
+        return
 
-    if eye_status != prev_eye_status:
-        publish_status(eye_status, now)
-        prev_buttons = list(msg.buttons)
-        prev_eye_status = eye_status
+    # check axes button
+    if len(msg.axes) <= 1:
+        rospy.logwarn("msg.axes only have {} elemnt, so skip sending look_at".format(len(msg.axes)))
+        return
+    # debug message
+    debug_msg = "{:4.1f} {:4.1f}, ".format(msg.axes[0], msg.axes[1])
+    for name, button in zip(eye_asset_names, msg.buttons):
+        debug_msg += "{}:{}, ".format(name[:3], button)
+    # update eye_status
+    eye_status = eye_asset_names[0]
+    for i, name in enumerate(eye_asset_names):
+        if i < len(msg.buttons) and msg.buttons[i] == 1:
+            eye_status = name
+            break
+    debug_msg += "status:{} ".format(eye_status)
+    rospy.loginfo(debug_msg)
+
+    # publish eye status only when it has changed
+    if prev_eye_status != eye_status:
+        rospy.loginfo("publish eye status : {}".format(eye_status))
+        pub_status.publish(eye_status)
+    prev_eye_status = eye_status
+
+    # mode_right is try by default and it is the eye on the right side from the front,
+    # that is, the left eye from the robot’s point of view.
+    # When looking at the display from the front, the origin is slightly to the left of the center.
+    if rospy.has_param("eye_display/mode_right"):
+        left_eye = rospy.get_param("eye_display/mode_right")
+    else:
+        rospy.logwarn("no mode_right found from rosparm 'eye_display/mode_right'")
+    # On right eye : when msg.axes[0] > 0, the eyes turn inward (cross-eyed)
+    axes_x = float(msg.axes[0]) * (1 if left_eye else -1)
+    axes_y = float(msg.axes[1]) * -1
+    look_at_x = (axes_x * (left_edge if axes_x > 0 else right_edge)) * (-1 if left_eye else 1)
+    look_at_y = (axes_y * (bottom_edge if axes_y > 0 else upper_edge))
+
+    look_at = Point(look_at_x, look_at_y, 0)
+    if abs(prev_look_at.x - look_at.x) > 1e-4 or \
+       abs(prev_look_at.y - look_at.y) > 1e-4:
+        rospy.loginfo("publish eye position : {:7.2f} {:7.2f}".format(look_at.x, look_at.y))
+        pub_look.publish(look_at)
+    prev_look_at = look_at
 
 if __name__ == '__main__':
     rospy.init_node('eye_st_from_joy')
     rospy.loginfo("node is initialized")
 
-    # for dual eye mode
-    pub_status_right = rospy.Publisher('/right/eye_display/eye_status',String,queue_size=1)
-    pub_status_left = rospy.Publisher('/left/eye_display/eye_status',String,queue_size=1)
-    pub_look_right = rospy.Publisher('/right/eye_display/look_at',Point,queue_size=1)
-    pub_look_left = rospy.Publisher('/left/eye_display/look_at',Point,queue_size=1)
-
     # for single eye mode
-    pub_look = rospy.Publisher('/eye_display/look_at',Point,queue_size=1)
-    pub_status = rospy.Publisher('/eye_display/eye_status',String,queue_size=1)
+    pub_look = rospy.Publisher('eye_display/look_at',Point,queue_size=1)
+    pub_status = rospy.Publisher('eye_display/eye_status',String,queue_size=1)
 
     # set the region where the eye can move
     left_edge = rospy.get_param('~left_edge', 10.0)
@@ -144,4 +91,5 @@ if __name__ == '__main__':
     duration = rospy.Duration(rospy.get_param('~duration',0.05))
 
     rospy.Subscriber('/joy',Joy, joy_cb, queue_size=1)
+    timer = rospy.Timer(duration, timer_cb)
     rospy.spin()

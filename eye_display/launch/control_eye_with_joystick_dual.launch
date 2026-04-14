@@ -1,0 +1,33 @@
+<launch>
+  <arg name="left_edge" default ="10.0"/>
+  <arg name="right_edge" default ="40.0"/>
+  <arg name="upper_edge" default ="15.0"/>
+  <arg name="bottom_edge" default ="40.0"/>
+  <arg name="x_diff" default="30.0"/>
+  <arg name="y_diff" default="5.0"/>
+
+  joy_node: decrease deadzone for reacting with tiny movements
+  <node pkg="joy" type="joy_node" name="joy_node">
+    <param name="dev"             value="/dev/input/js0" />
+    <param name="deadzone"        value="0.05" />
+    <param name="autorepeat_rate" value="30" />
+  </node>
+
+  <group ns="right" >
+    <node pkg="eye_display" type="joy_eye_status.py" name="joy_eye_status" output="screen">
+      <param name="left_edge" value="$(arg left_edge)" />
+      <param name="right_edge" value="$(arg right_edge)" />
+      <param name="upper_edge" value="$(arg upper_edge)" />
+      <param name="bottom_edge" value="$(arg bottom_edge)" />
+    </node>
+  </group>
+  <group ns="left" >
+    <node pkg="eye_display" type="joy_eye_status.py" name="joy_eye_status" output="screen">
+      <param name="left_edge" value="$(arg left_edge)" />
+      <param name="right_edge" value="$(arg right_edge)" />
+      <param name="upper_edge" value="$(arg upper_edge)" />
+      <param name="bottom_edge" value="$(arg bottom_edge)" />
+    </node>
+  </group>
+
+</launch>
