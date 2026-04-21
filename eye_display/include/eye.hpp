@@ -275,7 +275,9 @@ void EyeManager::load_eye_images()
     }
 
     if (path_jpg_reflex != NULL) {
-        if (current_eye_asset.invert_rl) sprite_reflex.setRotation(6);
+        // Do not mirror the reflex layer: the light-source direction is
+        // absolute in world space, so the highlight should sit on the same
+        // side of both eyes rather than being mirrored inward.
         sprite_reflex.fillScreen(TFT_WHITE);
         if (not draw_image_file(sprite_reflex, path_jpg_reflex, zoom_reflex)) {
             sprite_reflex.fillScreen(TFT_WHITE);
@@ -341,10 +343,14 @@ void EyeManager::update_look(float dx = 0.0f, float dy = 0.0f, float dtheta = 0.
       sprite_pupil.pushSprite(&sprite_eye, dx, dy, TFT_WHITE);
     else
       sprite_pupil.pushRotateZoomWithAA(&sprite_eye, image_width/2 + dx, image_height/2 + dy, dtheta, zoom_pupil*dzoom, zoom_pupil*dzoom, TFT_WHITE); // 瞳孔をランダムに動かす
+    // Left-eye-only offset so the highlight sits symmetrically about the nose.
+    // Right eye (invert_rl=false): no offset. Left eye (invert_rl=true): (+27, +3).
+    int reflex_x_off = current_eye_asset.invert_rl ? 27 : 0;
+    int reflex_y_off = current_eye_asset.invert_rl ? 3 : 0;
     if (zoom_reflex == 1 && dzoom == 1.0f && dtheta == 0.0f)
-      sprite_reflex.pushSprite(&sprite_eye, dx + rx, dy + ry, TFT_WHITE);
+      sprite_reflex.pushSprite(&sprite_eye, dx + rx + reflex_x_off, dy + ry + reflex_y_off, TFT_WHITE);
     else
-      sprite_reflex.pushRotateZoomWithAA(&sprite_eye, image_width/2 + dx + rx, image_height/2 + dy + ry, dtheta, zoom_reflex*dzoom, zoom_reflex*dzoom, TFT_WHITE); // 光の反射をランダムに動かす
+      sprite_reflex.pushRotateZoomWithAA(&sprite_eye, image_width/2 + dx + rx + reflex_x_off, image_height/2 + dy + ry + reflex_y_off, dtheta, zoom_reflex*dzoom, zoom_reflex*dzoom, TFT_WHITE); // 光の反射をランダムに動かす
     sprite_upperlid.pushRotateZoom(&sprite_eye,
                                    current_eye_asset.upperlid_default_pos_x + dx_upperlid,
                                    current_eye_asset.upperlid_default_pos_y + dy_upperlid,
