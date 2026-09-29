@@ -93,7 +93,12 @@ private:
   int image_width = 139;
   int image_height = 139;
 
-  unsigned long interval_time = 150;  // this will reproduce delay(100)
+  // Display frame period (ms). Drawing one frame measured 62-68 ms on the
+  // StampS3 (150 ms budget minus the 82-88 ms this loop reported sleeping),
+  // so 150 spent more than half of every frame idle and put the eye at
+  // 6.7 fps -- slow enough that a gaze step reads as the iris teleporting.
+  // 80 roughly doubles that and still leaves the draw ~15 ms of headroom.
+  unsigned long interval_time = 80;
   unsigned long next_time = millis() + interval_time;
   int frame = 0;
 
@@ -118,6 +123,10 @@ public:
                    float random_scale);
   unsigned long  update_next_time();
   long delay_next_time();
+  // Split out of delay_next_time so a caller can do something useful
+  // (service the serial link) instead of blocking until the next frame.
+  long time_until_next();
+  void advance_next_time();
 };
 
 
@@ -853,12 +862,28 @@ unsigned long EyeManager::update_next_time()
   return next_time;
 }
 
+long EyeManager::time_until_next()
+{
+  return (long)(next_time - millis());
+}
+
+void EyeManager::advance_next_time()
+{
+  next_time += interval_time;
+  // If a frame overran badly, next_time can fall arbitrarily far behind the
+  // clock, and every later frame then sees a negative wait and free-runs.
+  // Resynchronise instead of accumulating the debt.
+  if ( (long)(next_time - millis()) < -(long)interval_time ) {
+    next_time = millis() + interval_time;
+  }
+}
+
 long EyeManager::delay_next_time()
 {
-  long sleep_time = next_time - millis();
+  long sleep_time = time_until_next();
   if ( sleep_time > 0 ) {
     delay(sleep_time);
   }
-  next_time += interval_time;
+  advance_next_time();
   return sleep_time;
 }

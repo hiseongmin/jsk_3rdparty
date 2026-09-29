@@ -52,6 +52,18 @@ void setup()
   // initialize eye_asset_map and set current_eye_status
   eye.setup_asset(eye_asset_text);
 
+  // Optional: start at a known gaze instead of wherever the asset leaves it.
+  // Off by default so the stock behaviour is unchanged. Set the two flags in
+  // platformio.ini to use it, e.g. -DEYE_BOOT_GAZE_X=12.5 -DEYE_BOOT_GAZE_Y=7.0
+  //
+  // Worth having when the board resets often: without it the iris sits wherever
+  // the asset left it until the first look_at arrives, so every reset shows a
+  // jump. The right values are per-robot (they are the measured iris neutral),
+  // which is why they are flags and not a literal here.
+#if defined(EYE_BOOT_GAZE_X) && defined(EYE_BOOT_GAZE_Y)
+  eye.set_gaze_direction(EYE_BOOT_GAZE_X, EYE_BOOT_GAZE_Y, 0.0);
+#endif
+
   // draw eye image
   eye.update_look();
 
@@ -64,7 +76,26 @@ void loop()
 #if defined(USE_ROS)  // USE_ROS
   reconnect_ros(eye);
 #endif
-  long sleep_time = eye.delay_next_time();
+  // Wait for the next frame slot, but keep servicing the serial link while we
+  // wait. This used to be a single blocking delay() of ~84 ms, and spinOnce()
+  // was not called once during it: look_at messages piled up in the receive
+  // buffer (the host log shows them arriving three at a time), and when the
+  // buffer overflowed the link desynchronised and the host reported "Lost sync
+  // with device". The idle time was already being spent in delay(), so
+  // spinning through it costs nothing and the iris follows without the lag of
+  // a whole frame.
+  long sleep_time = eye.time_until_next();
+#if defined(USE_ROS)
+  while ( eye.time_until_next() > 0 ) {
+    nh.spinOnce();
+    delay(2);
+  }
+#else
+  if ( sleep_time > 0 ) {
+    delay(sleep_time);
+  }
+#endif
+  eye.advance_next_time();
 
   // update emotion, this calls update_look to display
   int frame = eye.update_emotion();
@@ -79,7 +110,7 @@ void loop()
   static float look_y = 0;
   look_x = 10.0 * sin(frame * 0.1);
   look_y = 10.0 * cos(frame * 0.1) ;
-  eye.set_gaze_direction(look_x, look_y);
+  eye.set_gaze_direction(look_x, look_y, 0.0);
 
   if (frame % 10 == 0) {
     static auto eye_asset = eye.eye_asset_map.begin();

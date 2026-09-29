@@ -48,7 +48,10 @@ def main():
                              "(they come up over rosserial); 0 = do not wait")
     parser.add_argument("--hold", type=float, default=5.0,
                         help="seconds to keep the latch alive after publishing")
-    args = parser.parse_args()
+    # parse_known_args, not parse_args: roslaunch appends __name:= and
+    # __log:= to every node's argv, and parse_args rejects them, so this
+    # script could only ever be started with rosrun.
+    args, _ = parser.parse_known_args()
 
     rospy.init_node("eye_set_pose_once", anonymous=True)
 
