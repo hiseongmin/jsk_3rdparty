@@ -103,7 +103,17 @@ void loop()
 #if defined(USE_ROS)
   nh.spinOnce();
 #endif
-  loginfo("[%8ld] Eye status: %s (%d) (sleep %ld ms)", millis(), eye.get_emotion().c_str(), frame, sleep_time);
+  // One line a second, not one a frame. Every log line is a rosserial message
+  // written back over the same USB link, and that write waits for the host to
+  // take it -- inside the frame budget, which has about 10 ms of slack. It is
+  // also the bulk of what fills the TX buffer, and a full TX buffer is what
+  // wedges the board. The frame counter is in the message, so two samples still
+  // give the frame rate.
+  static unsigned long last_status_log = 0;
+  if ( millis() - last_status_log >= 1000 ) {
+    last_status_log = millis();
+    loginfo("[%8ld] Eye status: %s (%d) (sleep %ld ms)", millis(), eye.get_emotion().c_str(), frame, sleep_time);
+  }
 
 #if !defined(USE_I2C) && !defined(USE_ROS) // sample code for eye asset
   static float look_x = 0;

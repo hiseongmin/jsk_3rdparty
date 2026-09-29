@@ -237,7 +237,14 @@ void EyeManager::set_gaze_direction(float look_x, float look_y, float look_theta
     current_eye_asset.iris_default_pos_x = look_x;
     current_eye_asset.iris_default_pos_y = look_y;
     current_eye_asset.iris_default_theta = look_theta;
-    loginfo("[%8ld] Look at (%.1f, %.1f, %.1f)", millis(), look_x, look_y, look_theta);
+    // Throttled for the same reason as the frame log: a gaze node sends up to
+    // ten of these a second, and each one logged is another message written
+    // back over the link it arrived on.
+    static unsigned long last_gaze_log = 0;
+    if ( millis() - last_gaze_log >= 1000 ) {
+      last_gaze_log = millis();
+      loginfo("[%8ld] Look at (%.1f, %.1f, %.1f)", millis(), look_x, look_y, look_theta);
+    }
 }
 
 // 目の状態を更新する
