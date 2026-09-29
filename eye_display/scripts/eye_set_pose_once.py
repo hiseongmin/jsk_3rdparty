@@ -48,6 +48,17 @@ def main():
                              "(they come up over rosserial); 0 = do not wait")
     parser.add_argument("--hold", type=float, default=5.0,
                         help="seconds to keep the latch alive after publishing")
+    parser.add_argument("--repeat", type=int, default=1,
+                        help="publish this many times, --interval apart. One is "
+                             "enough for a board that is already running. It is "
+                             "not enough right after connect: the board reloads "
+                             "its eye assets when ROS reconnects, which takes "
+                             "about a second, and a pose that lands during the "
+                             "reload is lost. Latching does not save it -- the "
+                             "board has already subscribed and received, so "
+                             "nothing is resent. Repeat past the reload instead.")
+    parser.add_argument("--interval", type=float, default=0.5,
+                        help="seconds between repeats")
     # parse_known_args, not parse_args: roslaunch appends __name:= and
     # __log:= to every node's argv, and parse_args rejects them, so this
     # script could only ever be started with rosrun.
@@ -67,9 +78,13 @@ def main():
                       args.wait, ", ".join(missing))
 
     msg = Point(x=args.x, y=args.y, z=args.z)
-    for _, pub in pubs:
-        pub.publish(msg)
-    rospy.loginfo("[eye_set_pose_once] look_at (%.1f, %.1f)", args.x, args.y)
+    for i in range(max(1, args.repeat)):
+        if i and (rospy.is_shutdown() or rospy.sleep(args.interval)):
+            break
+        for _, pub in pubs:
+            pub.publish(msg)
+    rospy.loginfo("[eye_set_pose_once] look_at (%.1f, %.1f)%s", args.x, args.y,
+                  (" x%d" % args.repeat) if args.repeat > 1 else "")
 
     # Keep the latch alive a little longer so a board that reconnects right
     # after (rosserial retries the handshake) still receives the pose.
