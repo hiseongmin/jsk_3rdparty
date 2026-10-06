@@ -1,0 +1,65 @@
+<launch>
+  <!-- ================================================================
+       Dual-eye joystick control (_ye version)
+
+       Runs two joy_eye_status_ye.py instances with namespaces.
+       Each instance controls one eye via namespace (right/left).
+       ================================================================ -->
+
+  <!-- Joystick device -->
+  <arg name="dev"              default="/dev/input/js0" />
+  <arg name="deadzone"         default="0.05" />
+  <arg name="autorepeat_rate"  default="30" />
+
+  <!-- Eye movement range (pixels, positive values) -->
+  <arg name="left_edge"      default="30.0"  />
+  <arg name="right_edge"     default="30.0"  />
+  <arg name="upper_edge"     default="30.0"  />
+  <arg name="bottom_edge"    default="30.0"  />
+
+  <!-- Publish rate and snap threshold -->
+  <arg name="duration"       default="0.05"  />
+  <arg name="snap_threshold" default="0.1"   />
+
+  <!-- Per-eye calibration offsets -->
+  <arg name="r_offset_x"    default="10.0"  />
+  <arg name="r_offset_y"    default="5.0"   />
+  <arg name="l_offset_x"    default="-10.0" />
+  <arg name="l_offset_y"    default="5.0"   />
+
+  <!-- joy_node -->
+  <node pkg="joy" type="joy_node" name="joy_node">
+    <param name="dev"             value="$(arg dev)" />
+    <param name="deadzone"        value="$(arg deadzone)" />
+    <param name="autorepeat_rate" value="$(arg autorepeat_rate)" />
+  </node>
+
+  <!-- Right eye instance -->
+  <group ns="right">
+    <node pkg="eye_display" type="joy_eye_status_ye.py" name="joy_eye_status" output="screen">
+      <param name="left_edge"      value="$(arg left_edge)"      />
+      <param name="right_edge"     value="$(arg right_edge)"     />
+      <param name="upper_edge"     value="$(arg upper_edge)"     />
+      <param name="bottom_edge"    value="$(arg bottom_edge)"    />
+      <param name="duration"       value="$(arg duration)"       />
+      <param name="snap_threshold" value="$(arg snap_threshold)" />
+      <param name="offset_x"      value="$(arg r_offset_x)"     />
+      <param name="offset_y"      value="$(arg r_offset_y)"     />
+    </node>
+  </group>
+
+  <!-- Left eye instance -->
+  <group ns="left">
+    <node pkg="eye_display" type="joy_eye_status_ye.py" name="joy_eye_status" output="screen">
+      <param name="left_edge"      value="$(arg left_edge)"      />
+      <param name="right_edge"     value="$(arg right_edge)"     />
+      <param name="upper_edge"     value="$(arg upper_edge)"     />
+      <param name="bottom_edge"    value="$(arg bottom_edge)"    />
+      <param name="duration"       value="$(arg duration)"       />
+      <param name="snap_threshold" value="$(arg snap_threshold)" />
+      <param name="offset_x"      value="$(arg l_offset_x)"     />
+      <param name="offset_y"      value="$(arg l_offset_y)"     />
+    </node>
+  </group>
+
+</launch>
