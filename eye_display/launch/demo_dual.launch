@@ -13,10 +13,15 @@
   <arg name="mode_right" default="true" />
   <arg name="mode_left" default="false" />
   <arg name="eye_asset_file" default="$(find eye_display)/launch/default.yaml" />
+  <!-- Per-eye assets. Default to eye_asset_file, so existing callers are
+       unaffected. Needed when the two eyes are not the same image — e.g. a
+       horizontally mirrored asset for the robot's right eye. -->
+  <arg name="eye_asset_file_right" default="$(arg eye_asset_file)" />
+  <arg name="eye_asset_file_left"  default="$(arg eye_asset_file)" />
   <arg name="debug" default="false" />
 
   <include file="$(find eye_display)/launch/demo.launch" ns="right" >
-    <arg name="eye_asset_file" value="$(arg eye_asset_file)" />
+    <arg name="eye_asset_file" value="$(arg eye_asset_file_right)" />
     <arg name="mode_right" value="$(arg mode_right)" />
     <arg name="direction" value="$(arg direction_right)" />
     <arg name="port" value="$(arg port_right)" />
@@ -26,7 +31,7 @@
     <arg name="debug" default="$(arg debug)" />
   </include>
   <include file="$(find eye_display)/launch/demo.launch" ns="left">
-    <arg name="eye_asset_file" value="$(arg eye_asset_file)" />
+    <arg name="eye_asset_file" value="$(arg eye_asset_file_left)" />
     <arg name="mode_right" value="$(arg mode_left)" />
     <arg name="direction" value="$(arg direction_left)" />
     <arg name="port" value="$(arg port_left)" />

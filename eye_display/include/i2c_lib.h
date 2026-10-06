@@ -30,7 +30,7 @@ void receiveEvent(int howMany) {
   } else if ( key  == "look_at") {
     double x, y;
     parseXY(value, x, y);
-    eye.set_gaze_direction(x, y);
+    eye.set_gaze_direction(x, y, 0.0);
   } else {
     eye.setup_asset({message});
   }

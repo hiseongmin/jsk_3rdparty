@@ -1,0 +1,48 @@
+<launch>
+  <!-- Nextage gaze study profile (ye).
+
+       Follows the per-profile convention of denden/kashiwagi/kuromitsu, but for
+       two eyes at once, because this robot has both and they are not the same
+       image: the robot's right eye uses a horizontally mirrored asset
+       (pos_x = 139 - x, theta negated). demo_dual.launch takes a per-eye asset
+       file for exactly this.
+
+       What differs from launch/default.yaml:
+         * iris_default_zoom 0.9 on every expression — the iris reads better
+           on this robot at 10% smaller.
+         * ye_right.yaml is the mirrored asset for the robot's right eye.
+
+       direction 6 was chosen for how the displays are mounted here; the other
+       profiles use 0 or 1.
+
+       Ports are required and have no default on purpose. The two boards
+       re-enumerate under new /dev/ttyACM* numbers whenever the USB link drops,
+       so a hardcoded port silently talks to the wrong eye. Resolve them by
+       serial number instead — nextage_gaze_calibration/scripts/run_eye_modules.py
+       does that and relaunches when the numbers move.
+
+         roslaunch eye_display ye.launch \
+           port_left:=/dev/ttyACM0 port_right:=/dev/ttyACM1
+  -->
+
+  <arg name="port_right" />
+  <arg name="port_left" />
+  <arg name="baud"            default="115200" />
+  <arg name="direction_right" default="6" />
+  <arg name="direction_left"  default="6" />
+  <arg name="debug"           default="false" />
+
+  <include file="$(find eye_display)/launch/demo_dual.launch">
+    <arg name="port_right" value="$(arg port_right)" />
+    <arg name="port_left"  value="$(arg port_left)" />
+    <arg name="baud"       value="$(arg baud)" />
+    <arg name="direction_right" value="$(arg direction_right)" />
+    <arg name="direction_left"  value="$(arg direction_left)" />
+    <!-- both eyes report mode_right; the mirroring lives in the asset, not here -->
+    <arg name="mode_right" value="true" />
+    <arg name="mode_left"  value="true" />
+    <arg name="eye_asset_file_right" value="$(find eye_display)/launch/ye.yaml" />
+    <arg name="eye_asset_file_left"  value="$(find eye_display)/launch/ye_right.yaml" />
+    <arg name="debug" value="$(arg debug)" />
+  </include>
+</launch>
