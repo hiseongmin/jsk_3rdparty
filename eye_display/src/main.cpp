@@ -10,12 +10,20 @@
 #endif
 
 #if defined(STAMPS3)
-#include "ArduinoHWCDCHardware.h"
+#include "ArduinoHWCDCHardware.h"  // also brings crash_trace.h
 #elif defined(STAMPC3)
 #include "ArduinoHardware.h"
 #endif
 
 #define TFT_BL 10 // LED back-light control pin
+
+#if defined(STAMPS3)
+#define TRACE_STAGE(s) trace_stage(s)
+#define TRACE_FRAME(f) trace_frame(f)
+#else
+#define TRACE_STAGE(s)
+#define TRACE_FRAME(f)
+#endif
 
 const int image_width = 139;
 const int image_height = 139;
@@ -35,6 +43,9 @@ std::string eye_asset_text =
 
 void setup()
 {
+#if defined(STAMPS3)
+  trace_setup();  // first: keep the trail from before this boot, arm the watchdog
+#endif
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
 
@@ -73,7 +84,11 @@ void setup()
 
 void loop()
 {
+#if defined(STAMPS3)
+  trace_feed();
+#endif
 #if defined(USE_ROS)  // USE_ROS
+  TRACE_STAGE(ST_RECONNECT);
   reconnect_ros(eye);
 #endif
   // Wait for the next frame slot, but keep servicing the serial link while we
@@ -86,6 +101,7 @@ void loop()
   // a whole frame.
   long sleep_time = eye.time_until_next();
 #if defined(USE_ROS)
+  TRACE_STAGE(ST_SPIN_WAIT);
   while ( eye.time_until_next() > 0 ) {
     nh.spinOnce();
     delay(2);
@@ -98,9 +114,12 @@ void loop()
   eye.advance_next_time();
 
   // update emotion, this calls update_look to display
+  TRACE_STAGE(ST_DRAW);
   int frame = eye.update_emotion();
+  TRACE_FRAME(frame);
 
 #if defined(USE_ROS)
+  TRACE_STAGE(ST_SPIN_AFTER);
   nh.spinOnce();
 #endif
   // One line a second, not one a frame. Every log line is a rosserial message
@@ -112,7 +131,13 @@ void loop()
   static unsigned long last_status_log = 0;
   if ( millis() - last_status_log >= 1000 ) {
     last_status_log = millis();
+    TRACE_STAGE(ST_LOG);
+#if defined(STAMPS3) && defined(USE_ROS)
+    loginfo("[%8ld] Eye status: %s (%d) (sleep %ld ms) (dropped logs %lu)", millis(), eye.get_emotion().c_str(), frame, sleep_time,
+            nh.getHardware()->dropped_logs);
+#else
     loginfo("[%8ld] Eye status: %s (%d) (sleep %ld ms)", millis(), eye.get_emotion().c_str(), frame, sleep_time);
+#endif
   }
 
 #if !defined(USE_I2C) && !defined(USE_ROS) // sample code for eye asset

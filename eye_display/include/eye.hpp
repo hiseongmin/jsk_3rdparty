@@ -319,8 +319,16 @@ void EyeManager::update_look(float dx = 0.0f, float dy = 0.0f, float dtheta = 0.
           float random_scale = 5.0)
 {
     EyeAsset& current_eye_asset = eye_asset_map[current_eye_asset_name];
+#if defined(EYE_LOG_EVERY_FRAME)
+    // Off by default. This line is ~155 characters and was sent on every frame,
+    // from inside the draw: 12.5 a second, about 2 kB/s written back over the
+    // rosserial link. It is logdebug, so the host never prints it and it was
+    // invisible -- but it was the bulk of the board's TX traffic, and the frame
+    // a board was in the middle of writing when it froze (crash_trace.h caught
+    // it: io write, frame len 168, topic 7 = rosout, seven of the last eight
+    // frames written). Define EYE_LOG_EVERY_FRAME to get it back for debugging.
     std::ostringstream oss;
-    oss << "[" << millis << "] [update_look] "
+    oss << "[" << millis() << "] [update_look] "
         << std::fixed << std::setprecision(1)  // 以下、浮動小数点はすべて%.1f
         << "dx: " << dx << ", "
         << "dy: " << dy << ", "
@@ -336,6 +344,7 @@ void EyeManager::update_look(float dx = 0.0f, float dy = 0.0f, float dtheta = 0.
     if ( !dtheta_extra.empty() ) { oss << ", dtheta_extra: " << joinVector(dtheta_extra); }
     if ( !dzoom_extra.empty() ) { oss << ", dzoom_extra: " << joinVector(dzoom_extra); }
     logdebug(oss.str().c_str());
+#endif
     if ( dzoom <= 0.0f || dzoom_upperlid <= 0.0f) {
       logwarn("zoom parametr must be > 0 (dzoom:%.1f dzoom_upperlid:%.1f", dzoom, dzoom_upperlid);
     }

@@ -3,6 +3,9 @@
 #include <iterator>
 #include <sstream>
 
+#if defined(STAMPS3)
+#include "crash_trace.h"
+#endif
 #include "node_handle_ex.h"  // #include "ros/node_handle.h"
 #include "geometry_msgs/Point.h"
 #include "std_msgs/String.h"
@@ -216,6 +219,13 @@ void reconnect_ros(EyeManager &eye)
   ros_now_connected = nh.connected();
   if (ros_now_connected && !ros_was_connected) {
     loginfo("ROS reconnected, initializing eye assets");
+#if defined(STAMPS3)
+    // once per boot: why the last boot ended, if not power-on. Forced through:
+    // logs are otherwise dropped when the link is busy, and it is busy now.
+    nh.getHardware()->force_logs = true;
+    trace_report(logwarn);
+    nh.getHardware()->force_logs = false;
+#endif
     // when ROS node is re-connected, get rosparam again
     eye.setup_asset(ros_read_asset());
   }
